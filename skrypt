@@ -24,7 +24,7 @@ function Print-UncLike {
 }
 
 if (!(Test-Path $serverListPath)) {
-    Write-Host "Plik $serverListPath nie istnieje." -ForegroundColor Red
+    Write-Host "File $serverListPath not found." -ForegroundColor Red
     exit
 }
 
@@ -32,13 +32,13 @@ $servers = Get-Content $serverListPath | Where-Object { $_.Trim() -ne "" }
 
 foreach ($server in $servers) {
     $server = $server.Trim()
-    Write-Host "`n=== Serwer: $server ==="
+    Write-Host "`n=== Server: $server ==="
 
     $sharesOutput = net view \\$server 2>&1
     Start-Sleep -Seconds $sleepSeconds
 
-    if ($sharesOutput -match "Błąd systemu|Nie można odnaleźć|System error|The network path was not found") {
-        Write-Host "[BŁĄD] Nie można pobrać udziałów z $server – pomijam." -ForegroundColor Red
+    if ($sharesOutput -match ".l.d systemu|Nie mo.na odnale.|System error|The network path was not found") {
+        Write-Host "[BLAD] Nie mozna pobrac udzialow z $server - pomijam." -ForegroundColor Red
         continue
     }
 
@@ -52,22 +52,22 @@ foreach ($server in $servers) {
 
     foreach ($shareName in $shares) {
         $remotePath = "\\$server\$shareName"
-        Write-Host "`n[INFO] Sprawdzanie udziału: $remotePath"
+        Write-Host "`n[INFO] Sprawdzanie udzialu: $remotePath"
 
         if (Test-Path "$driveLetter\") {
-            Write-Host "[INFO] Litera $driveLetter zajęta – pomijam $shareName"
+            Write-Host "[INFO] Litera $driveLetter zajeta - pomijam $shareName"
             continue
         }
 
         $result = net use $driveLetter $remotePath 2>&1
         Start-Sleep -Seconds $sleepSeconds 
 
-        if ($result -match "Polecenie zostało wykonane pomyślnie|The command completed successfully") {
-            Write-Host "[OK] Zmapowano $remotePath. Zawartość:"
+        if ($result -match "Polecenie zosta.o wykonane pomy.lnie|The command completed successfully") {
+            Write-Host "[OK] Zmapowano $remotePath. Zawartosc:"
             Print-UncLike -rootPath "$driveLetter\" -baseUnc $remotePath -sleep $sleepSeconds
             net use $driveLetter /delete > $null
         } else {
-            Write-Host "[BŁĄD] Mapowanie udziału $remotePath nie powiodło się:" -ForegroundColor Red
+            Write-Host "[BLAD] Mapowanie udzialu $remotePath nie powiodlo sie:" -ForegroundColor Red
             Write-Host $result -ForegroundColor DarkRed
         }
 
