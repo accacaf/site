@@ -5,6 +5,10 @@ $username = ".\user"
 $password = "haslo123"
 $driveLetter = "Z:"
 $sleepSeconds = 1
+$outputFile = "results.txt"
+
+# Clear output file at start
+"" | Out-File -Encoding UTF8 $outputFile
 
 function Print-UncLike {
     param (
@@ -14,11 +18,15 @@ function Print-UncLike {
     )
 
     Write-Host "$baseUnc"
+    Add-Content -Path $outputFile -Value "$baseUnc"
+
     Get-ChildItem -Path $rootPath -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue | ForEach-Object {
         $relative = $_.FullName.Substring($rootPath.Length).TrimStart('\')
-        Write-Host "$baseUnc\$relative"
+        $fullUnc = "$baseUnc\$relative"
+        Write-Host $fullUnc
+        Add-Content -Path $outputFile -Value $fullUnc
         if ($sleep -gt 0) {
-            #Start-Sleep -Seconds $sleep
+            # Start-Sleep -Seconds $sleep
         }
     }
 }
