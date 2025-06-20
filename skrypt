@@ -1,0 +1,70 @@
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+$serverListPath = "servers.txt"
+$username = ".\user"
+$password = "haslo123"
+$driveLetter = "Z:"
+
+function Print-UncLike {
+    param (
+        [string]$rootPath,
+        [string]$baseUnc
+    )
+
+    Write-Host "$baseUnc"
+    Get-ChildItem -Path $rootPath -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue | ForEach-Object {
+        $relative = $_.FullName.Substring($rootPath.Length).TrimStart('\')
+        #$relative = $relative -replace '\\', '/'
+        Write-Host "$baseUnc\$relative"
+    }
+}
+
+if (!(Test-Path $serverListPath)) {
+    Write-Host "Plik $serverListPath nie istnieje." -ForegroundColor Red
+    exit
+}
+
+$servers = Get-Content $serverListPath | Where-Object { $_.Trim() -ne "" }
+
+foreach ($server in $servers) {
+    $server = $server.Trim()
+    Write-Host "`n=== Serwer: $server ==="
+
+    $sharesOutput = net view \\$server 2>&1
+
+    if ($sharesOutput -match "Błąd systemu|Nie można odnaleźć|System error|The network path was not found") {
+        Write-Host "[BŁĄD] Nie można pobrać udziałów z $server – pomijam." -ForegroundColor Red
+        continue
+    }
+
+    $shares = @()
+    foreach ($line in $sharesOutput) {
+        if ($line -match "\s+(Dysk|Disk)\s*$") {
+            $shareName = ($line -split "\s+")[0]
+            $shares += $shareName
+        }
+    }
+
+    foreach ($shareName in $shares) {
+        $remotePath = "\\$server\$shareName"
+        Write-Host "`n[INFO] Sprawdzanie udziału: $remotePath"
+
+        if (Test-Path "$driveLetter\") {
+            Write-Host "[INFO] Litera $driveLetter zajęta – pomijam $shareName"
+            continue
+        }
+
+        $result = net use $driveLetter $remotePath 2>&1
+
+        if ($result -match "Polecenie zostało wykonane pomyślnie|The command completed successfully") {
+            Write-Host "[OK] Zmapowano $remotePath. Zawartość:"
+            Print-UncLike -rootPath "$driveLetter\" -baseUnc $remotePath
+            net use $driveLetter /delete > $null
+        } else {
+            Write-Host "[BŁĄD] Mapowanie udziału $remotePath nie powiodło się:" -ForegroundColor Red
+            Write-Host $result -ForegroundColor DarkRed
+        }
+
+        Start-Sleep -Seconds 1
+    }
+}
